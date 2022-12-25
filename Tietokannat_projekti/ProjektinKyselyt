@@ -1,0 +1,83 @@
+SELECT nimi
+FROM Työntekijä
+WHERE nro NOT IN (
+    SELECT Huolto.työntekijäNo
+    FROM Huolto
+    WHERE ((Huolto.aloitusAika BETWEEN '13:00:00' AND '15:59:59') OR (Huolto.lopetusAika  BETWEEN '13:00:01' AND '15:59:59')) AND Huolto.aloitusPäivä='2022-05-07'
+    UNION
+    SELECT T.nro
+    FROM Työntekijä AS T, Poissaolot AS P
+    WHERE P.työntekijäNo = T.nro AND '2022-05-07' BETWEEN P.aloitus AND P.lopetus
+);
+
+SELECT nimi, sposti, osoite
+FROM Huolto AS H, Auto AS A, Asiakas
+WHERE sposti = asiakasSposti AND H.rekisteriNo = A.rekisteriNo AND A.rekisteriNo = 'ZIN-602';
+
+SELECT Asiakas.nimi, SUM(Lasku.summa)
+FROM Lasku, Huolto, Asiakas
+WHERE Asiakas.sposti=Huolto.asiakasSposti AND Huolto.laskuNo=Lasku.nro
+GROUP BY Asiakas.sposti;
+
+SELECT Asiakas.nimi, SUM(Maksumuistutus.hinta)
+FROM Maksumuistutus, Asiakas, Lasku, Huolto
+WHERE Maksumuistutus.laskuNo=Lasku.nro AND Asiakas.sposti=Huolto.asiakasSposti AND Huolto.laskuNo=Lasku.nro
+GROUP BY Asiakas.sposti;
+
+SELECT huoltoNimi, aloitusPäivä
+FROM Auto AS A, Huolto AS H
+WHERE A.rekisteriNo = H.rekisteriNo AND A.rekisteriNo = 'ZIN-602';
+
+SELECT tyyppi
+FROM Toimenpide, Huoltosuunnitelma, Kuuluu
+WHERE tyyppi = toimenpideTyyppi AND nimi = huoltoNimi AND nimi = 'Ratin vaihto';
+
+SELECT DISTINCT *
+FROM Yksittäinen_laite
+WHERE laiteTyyppi='Painepesuri' AND laiteNo NOT IN (
+    SELECT laiteNo
+    FROM Laitevaraus
+    WHERE laitetyyppi='Painepesuri' AND aloitusPäivä = '2022-05-01' AND ((aloitusAika BETWEEN '15:00' AND '17:00') OR (lopetusAika BETWEEN '15:00' AND '17:00'))
+);
+
+SELECT aloitus, lopetus, nimi
+FROM Työntekijä, Poissaolot
+WHERE nro = työntekijäNo
+ORDER BY aloitus;
+
+SELECT huoltoNo, aloitusPäivä, rekisteriNo, asiakasSposti, huoltoNimi
+FROM Huolto
+WHERE aloitusPäivä > '2022-05-01'
+ORDER BY aloitusPäivä;
+
+SELECT T.nimi, T.nro, H.aloitusPäivä, H.tyyppi
+FROM Työntekijä AS T, Huolto AS H
+WHERE T.nro=H.työntekijäNo
+ORDER BY H.aloitusPäivä;
+
+SELECT DISTINCT Asiakas.nimi, Lasku.nro
+FROM Maksumuistutus, Lasku, Huolto, Asiakas
+WHERE Asiakas.sposti=Huolto.asiakasSposti AND Maksumuistutus.laskuNo=Lasku.nro AND Lasku.nro=Huolto.laskuNo AND Lasku.nro NOT IN (
+    SELECT laskuNo
+    FROM Maksu
+);
+
+SELECT DISTINCT A.rekisteriNo, HS.nimi, V.nimi, T.määrä
+FROM Huolto AS H, Tarvitaan AS T, Varaosa AS V, Huoltosuunnitelma AS HS, Auto AS A
+WHERE T.nimi = V.nimi AND T.huoltoNo = H.huoltoNo AND HS.nimi = huoltoNimi AND A.rekisteriNo = H.rekisteriNo;
+
+SELECT SUM(summa)
+FROM Lasku
+WHERE nro NOT IN (
+    SELECT laskuNo
+    FROM Maksu
+);
+
+SELECT DISTINCT A.nimi, sposti, osoite
+FROM Asiakas AS A, Lasku AS L, Huolto AS H
+WHERE sposti = asiakasSposti AND nro = laskuNo AND L.eräpäivä BETWEEN '2022-06-01' AND '2022-06-31';
+
+SELECT Omistaja.nimi, Omistaja.heTu, COUNT(Omistaa.rekisteriNo)
+FROM Omistaa, Omistaja
+WHERE Omistaa.heTu=Omistaja.heTu
+GROUP BY Omistaa.heTu;

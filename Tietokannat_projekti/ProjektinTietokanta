@@ -1,0 +1,264 @@
+CREATE TABLE Huolto (
+    huoltoNo INTEGER PRIMARY KEY,
+    aloitusPäivä DATE,
+    aloitusAika TIME,
+    lopetusAika TIME,
+    tyyppi TEXT CHECK (tyyppi IN ('määräaikaishuolto', 'korjaus')),
+    rekisteriNo REFERENCES Auto(rekisteriNo),
+    laskuNo REFERENCES Lasku(nro),
+    asiakasSposti REFERENCES Asiakas(sposti),
+    huoltoNimi REFERENCES Huoltosuunnitelma(nimi),
+    työntekijäNo REFERENCES Työntekijä(nro)
+);
+
+CREATE TABLE Auto(
+    rekisteriNo TEXT PRIMARY KEY CHECK (rekisteriNo LIKE '___-___'),
+    kilometrit INTEGER
+);
+
+CREATE TABLE Omistaja (
+    heTu TEXT PRIMARY KEY CHECK (heTu LIKE '___________'),
+    nimi TEXT,
+    osoite TEXT
+);
+
+CREATE TABLE Omistaa (
+    rekisteriNo REFERENCES Auto(rekisteriNo),
+    heTu TEXT REFERENCES Omistaja(heTu),
+    PRIMARY KEY (rekisteriNo, heTu)
+);
+
+CREATE TABLE Lasku (
+    nro INTEGER PRIMARY KEY,
+    summa REAL,
+    eräpäivä DATE
+);
+
+CREATE TABLE Maksumuistutus (
+    id INTEGER PRIMARY KEY,
+    hinta REAL,
+    eräpäivä DATE,
+    laskuNo REFERENCES Lasku(nro)
+);
+
+CREATE TABLE Maksu (
+    id INTEGER,
+    asiakasSposti REFERENCES Asiakas(sposti),
+    laskuNo REFERENCES Lasku(nro),
+    PRIMARY KEY (id, laskuNo)
+);
+
+CREATE TABLE Asiakas (
+    sposti TEXT PRIMARY KEY CHECK (sposti LIKE '%@%'),
+    nimi TEXT, 
+    osoite TEXT
+);
+
+CREATE TABLE Varaosa (
+    nimi TEXT PRIMARY KEY
+);
+
+CREATE TABLE Tarvitaan (
+    määrä INTEGER,
+    nimi REFERENCES Varaosa(nimi),
+    huoltoNo REFERENCES Huolto(huoltoNo),
+    PRIMARY KEY (nimi, huoltoNo)
+);
+
+CREATE TABLE Huoltosuunnitelma (
+    nimi TEXT PRIMARY KEY
+);
+
+CREATE TABLE Kuuluu (
+    huoltoNimi REFERENCES Huoltosuunnitelma(nimi),
+    toimenpideTyyppi REFERENCES Toimenpide(tyyppi),
+    PRIMARY KEY (huoltoNimi, toimenpideTyyppi)
+);
+
+CREATE TABLE Toimenpide (
+    tyyppi TEXT PRIMARY KEY,
+    kesto INTEGER
+);
+
+CREATE TABLE Käytetään (
+    toimenpidetyyppi REFERENCES Toimenpide(tyyppi),
+    laitetyyppi REFERENCES Laitetyyppi(tyyppi),
+    PRIMARY KEY (toimenpidetyyppi, laitetyyppi)
+);
+
+CREATE TABLE Laitetyyppi (
+    tyyppi TEXT PRIMARY KEY
+);
+
+CREATE TABLE Yksittäinen_laite (
+    laiteNo INTEGER,
+    laitetyyppi REFERENCES Laitetyyppi(tyyppi),
+    PRIMARY KEY (laiteNo, laitetyyppi)
+);
+
+CREATE TABLE Laitevaraus (
+    aloitusPäivä DATE,
+    aloitusAika TIME,
+    lopetusAika TIME,
+    huoltoNo REFERENCES Huolto(huoltoNo),
+    laiteNo INTEGER,
+    laitetyyppi TEXT,
+    FOREIGN KEY (laiteNo, laitetyyppi) REFERENCES Yksittäinen_laite(laiteNo, laitetyyppi),
+    PRIMARY KEY (aloitusPäivä, aloitusAika, huoltoNo, laiteNo, laitetyyppi)
+);
+
+CREATE TABLE Työntekijä (
+    nro INTEGER PRIMARY KEY,
+    nimi TEXT
+);
+
+CREATE TABLE Poissaolot (
+    aloitus DATE,
+    työntekijäNo REFERENCES Työntekijä(nro),
+    lopetus DATE,
+    PRIMARY KEY (aloitus, työntekijäNo),
+    CHECK (aloitus < lopetus)
+);
+
+CREATE VIEW Maksamattomat AS
+    SELECT Asiakas.nimi
+    FROM Lasku, Huolto, Asiakas
+    WHERE Huolto.laskuNo=Lasku.numero AND Asiakas.sposti=Huolto.asiakasSposti AND Lasku.numero NOT IN (
+        SELECT laskuNo
+        FROM Maksu
+);
+
+INSERT INTO Auto
+VALUES
+('ZIN-602', 300000),
+('QWE-123', 300000),
+('ABC-123', 100),
+('TIK-999', 10000),
+('SIK-234', 32145),
+('KIK-690', 1000000),
+('DFG-345', 430),
+('ASG-234', 312);
+
+INSERT INTO Omistaja
+VALUES
+('123456-123A', 'Pekka', 'Otakaari 20'),
+('234567-234B', 'Anna', 'Otakaari 18'),
+('345678-345C', 'Toivo', 'Jämeräntaival 1'),
+('456789-456D', 'Iina', 'Jämeräntaival 1'),
+('567890-567E', 'Teuvo', 'Otakaari 20');
+
+INSERT INTO Omistaa
+VALUES
+('ZIN-602', '234567-234B'),
+('QWE-123', '123456-123A'),
+('ABC-123', '345678-345C'),
+('TIK-999', '456789-456D'),
+('SIK-234', '456789-456D'),
+('KIK-690', '567890-567E'),
+('DFG-345', '567890-567E'),
+('ASG-234', '567890-567E');
+
+INSERT INTO Työntekijä
+VALUES 
+(567, 'Antti'),
+(894, 'Jaana'),
+(123, 'Jaakko');
+
+INSERT INTO Varaosa
+VALUES
+('Hihna'),
+('Pakoputki'),
+('Katalysaattori'),
+('Ratti');
+
+INSERT INTO Lasku
+VALUES
+(12345, 90.50, '2022-06-01'),
+(23456, 49.80, '2022-05-10'),
+(34567, 65.30, '2022-05-30'),
+(45678, 41.30, '2022-06-30');
+
+INSERT INTO Maksumuistutus
+VALUES
+(88999, 10.00, '2022-07-01', 12345),
+(89000, 10.00, '2022-08-01', 12345);
+
+
+INSERT INTO Asiakas
+VALUES
+('pekka@gmail.com', 'Pekka', 'Otakaari 20'),
+('anna@gmail.com', 'Anna', 'Otakaari 18'),
+('ulla@gmail.com', 'Ulla', 'Mannerheimintie 12');
+
+INSERT INTO Maksu
+VALUES 
+(50100, 'ulla@gmail.com', 23456),
+(50101, 'pekka@gmail.com', 45678);
+
+INSERT INTO Huoltosuunnitelma
+VALUES
+('Ratin vaihto'),
+('Hihnan vaihto'),
+('Auton pesu');
+
+INSERT INTO Toimenpide
+VALUES
+('Ratin vaihtaminen', 30),
+('Hihnan vaihtaminen', 120),
+('Auton peseminen', 60);
+
+INSERT INTO Kuuluu
+VALUES
+('Ratin vaihto', 'Ratin vaihtaminen'),
+('Ratin vaihto', 'Auton peseminen'),
+('Hihnan vaihto', 'Hihnan vaihtaminen'),
+('Hihnan vaihto', 'Auton peseminen'),
+('Auton pesu', 'Auton peseminen');
+
+INSERT INTO Laitetyyppi
+VALUES
+('Painepesuri'),
+('Nosturi'),
+('Hitsausvälineet');
+
+INSERT INTO Käytetään
+VALUES
+('Ratin vaihtaminen', 'Hitsausvälineet'),
+('Hihnan vaihtaminen', 'Hitsausvälineet'),
+('Hihnan vaihtaminen', 'Nosturi'),
+('Auton peseminen', 'Painepesuri');
+
+INSERT INTO Yksittäinen_laite
+VALUES 
+(1, 'Painepesuri'),
+(2, 'Painepesuri'),
+(1, 'Nosturi'),
+(1, 'Hitsausvälineet'),
+(2, 'Hitsausvälineet'),
+(3, 'Hitsausvälineet');
+
+INSERT INTO Huolto
+VALUES
+(100000, '2022-05-07', '15:00', '17:00', 'korjaus', 'ZIN-602', 12345, 'anna@gmail.com', 'Ratin vaihto', 567),
+(100001, '2022-05-01', '12:00', '14:30', 'määräaikaishuolto', 'KIK-690', 23456, 'ulla@gmail.com', 'Hihnan vaihto', 123),
+(100002, '2022-05-03', '15:00', '16:30', 'korjaus', 'TIK-999', 34567, 'ulla@gmail.com', 'Auton pesu', 567),
+(100003, '2022-05-03', '15:00', '16:30', 'korjaus', 'QWE-123', 45678, 'pekka@gmail.com', 'Auton pesu', 123);
+
+INSERT INTO Tarvitaan
+VALUES
+(1, 'Ratti', 100000),
+(1, 'Hihna', 100001);
+
+INSERT INTO Laitevaraus
+VALUES
+('2022-05-07', '15:00', '15:30', 100000, 1, 'Hitsausvälineet'),
+('2022-05-07', '15:40', '16:40', 100000, 1, 'Painepesuri'),
+('2022-05-01', '12:00', '14:00', 100001, 1, 'Nosturi'),
+('2022-05-01', '14:00', '16:00', 100001, 1, 'Painepesuri'),
+('2022-05-03', '15:00', '16:00', 100002, 1, 'Painepesuri'),
+('2022-05-03', '15:00', '16:00', 100003, 2, 'Painepesuri');
+
+INSERT INTO Poissaolot
+VALUES
+('2022-05-06', 123, '2022-05-20'),
+('2022-01-01', 123, '2022-02-01');
